@@ -9,7 +9,7 @@ namespace FHV_App
     public class ImportCSV
     {
         [Obsolete]
-        public void ImportData(IMongoCollection<BsonDocument> collection)
+        public async Task<bool> ImportData(IMongoCollection<BsonDocument> collection)
         {
             string filePath = GetFilePath();
             var records = ReadCsvFile(filePath);
@@ -20,10 +20,12 @@ namespace FHV_App
             {
                 var filterx = Builders<BsonDocument>.Filter.Eq("DMV License Plate Number", document["DMV License Plate Number"]);
                 var updateOptions = new UpdateOptions { IsUpsert = true }; // Insert if not exists
-                collection.ReplaceOneAsync(filterx, document, updateOptions);
+                var result = await collection.ReplaceOneAsync(filterx, document, updateOptions);
+                Console.WriteLine($"Daten erfolgreich importiert! \n {result}");
+                return true;
             }
-
-            Console.WriteLine("Daten erfolgreich importiert!");
+            return false;
+            
         }
         public static string GetFilePath()
         {
@@ -40,12 +42,22 @@ namespace FHV_App
                     Console.WriteLine(e.Message);
                     filePath = null;
                 }
-                if (filePath == null)
-                {
-                    Console.WriteLine("Bitte geben Sie einen gültigen Pfad ein!");
-                }
+                filePath = ValidatePath(filePath);
+                
             } while (filePath == null);
             return filePath;
+        }
+        public static string? ValidatePath(string? filePath)
+        {
+            if (filePath == null || !filePath.EndsWith(".csv") || !System.IO.File.Exists(filePath))
+                {
+                    Console.WriteLine("Bitte geben Sie einen gültigen Pfad ein!");
+                    return null;
+                }
+            else
+            {
+                return filePath;
+            }
         }
         public static List<Vehicle> ReadCsvFile(string filePath)
         {
