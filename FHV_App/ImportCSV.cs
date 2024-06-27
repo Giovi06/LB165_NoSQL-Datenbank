@@ -20,8 +20,7 @@ namespace FHV_App
             {
                 var filterx = Builders<BsonDocument>.Filter.Eq("DMV License Plate Number", document["DMV License Plate Number"]);
                 var updateOptions = new UpdateOptions { IsUpsert = true }; // Insert if not exists
-                var result = await collection.ReplaceOneAsync(filterx, document, updateOptions);
-                Console.WriteLine($"Daten erfolgreich importiert! \n {result}");
+                await collection.ReplaceOneAsync(filterx, document, updateOptions);
                 return true;
             }
             return false;

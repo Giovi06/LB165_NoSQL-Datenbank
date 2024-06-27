@@ -6,26 +6,35 @@ using FHV_App;
 class Programm
 {
     [Obsolete]
-    public static void Main()
+    public static async Task Main()
     {
 
         string connectionString = "mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.";
         MongoDBConnection connection = new(connectionString, "FHV");
         IMongoCollection<BsonDocument> vehiclesCollection = connection.GetCollection("Vehicles");
 
-        bool answer = ValidateYesOrNo(GetUserInput("Möchtest du neue Daten importieren? \n Ja oder Nein? [Y/N]"));
-        
+
+
+
+
+
+
+
+        bool answer;
+        answer = ValidateYesOrNo(GetUserInput("Möchtest du neue Daten importieren? \n Ja oder Nein? [Y/N]"));
+
         if (answer)
         {
             ImportCSV importCSV = new();
-            string? done = importCSV.ImportData(vehiclesCollection).ToString();
+            bool done = true;
+            done = await importCSV.ImportData(vehiclesCollection);
 
-            while (done == "false")
+            while (done)
             {
                 Console.WriteLine("Daten werden importiert...");
             }
         }
-        else
+        else if (!answer)
         {
             answer = ValidateYesOrNo(GetUserInput("Möchtest du die Fahrzeuge anhand der Kriterien anzeigen? \n Ja oder Nein? [Y/N]"));
 
@@ -35,6 +44,7 @@ class Programm
                 System.Environment.Exit(0);
             }
         }
+
 
         Vehicle vehicle1 = new();
         var projectionBuidler = Builders<BsonDocument>.Projection.Exclude("_id");
@@ -166,7 +176,6 @@ class Programm
             projection1 = Builders<BsonDocument>.Projection.Combine(projection1, projection);
         }
 
-
         if (!string.IsNullOrWhiteSpace(vehicle1.Active))
         {
             var activeFilter = filterBuilder.Eq("Active", vehicle1.Active);
@@ -253,17 +262,21 @@ class Programm
             filter1 &= lastTimeUpdatedFilter;
         }
 
-        var activeVehiclesFiltered = vehiclesCollection.Find(filter1).Project(projection1).ToList();
+        var activeVehiclesFiltered = await vehiclesCollection.Find(filter1).Project(projection1).ToListAsync();
 
         Console.WriteLine($"Fahrzeuge gefunden: \n");
 
-        foreach (var vehicle in activeVehiclesFiltered)
+        Parallel.ForEach(activeVehiclesFiltered, vehicle =>
         {
-            Console.WriteLine(vehicle);
-        }
+            ProcessVehicle(vehicle);
+        });
 
         Console.WriteLine($"\n {activeVehiclesFiltered.Count} Fahrzeuge gefunden!");
 
+    }
+    public static void ProcessVehicle(BsonDocument vehicle)
+    {
+        Console.WriteLine(vehicle.ToString());
     }
 
     public static bool ValidateYesOrNo(string answer)
